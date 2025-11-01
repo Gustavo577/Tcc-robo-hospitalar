@@ -1,0 +1,170 @@
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Keypad.h>
+#include <Servo.h>
+
+// ---------------- RFID ----------------
+#define SS_PIN 53
+#define RST_PIN 49
+MFRC522 mfrc522(SS_PIN, RST_PIN);
+
+// ---------------- Teclado ----------------
+const byte ROWS = 4;
+const byte COLS = 3;
+char keys[ROWS][COLS] = {
+  {'1','2','3'},
+  {'4','5','6'},
+  {'7','8','9'},
+  {'*','0','#'}
+};
+byte rowPins[ROWS] = {22, 24, 26, 28};
+byte colPins[COLS] = {30, 32, 34};
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+
+// ---------------- Sensores de linha ----------------
+#define SENSOR_ESQ 40
+#define SENSOR_DIR 42
+
+// ---------------- Servos ----------------
+Servo servoEsq;
+Servo servoDir;
+Servo servoPorta; // novo servo para abrir/fechar a porta
+
+// ---------------- Variáveis de controle ----------------
+int intersecao = 0;
+int destino = -1;
+bool intersecaoDetectada = false;
+bool primeiraLeitura = true;
+
+String mapa[10] = {"", "Quarto 1", "Quarto 2", "Quarto 3", "Quarto 4",
+                   "Quarto 5", "Quarto 6", "Quarto 7", "Quarto 8", "Quarto 9"};
+
+// ---------------- Setup ----------------
+void setup() {
+  Serial.begin(9600);
+
+  SPI.begin();
+  mfrc522.PCD_Init();
+
+  pinMode(SENSOR_ESQ, INPUT);
+  pinMode(SENSOR_DIR, INPUT);
+
+  servoEsq.attach(46);
+  servoDir.attach(47);
+  servoPorta.attach(45); // pino do servo da porta
+
+  pararMotores();
+  servoPorta.write(0); // porta inicialmente fechada
+
+  Serial.println("Sistema pronto: digite o quarto no teclado (1-10).");
+}
+
+// ---------------- Funções auxiliares ----------------
+void andarFrente() {
+  servoEsq.write(180);
+  servoDir.write(180);
+}
+
+void meiaVolta() {
+  servoEsq.write(180);
+  servoDir.write(180);
+  delay(1200);
+  pararMotores();
+}
+
+void pararMotores() {
+  servoEsq.write(90);
+  servoDir.write(90);
+}
+
+void abrirPorta() {
+  Serial.println("Abrindo porta...");
+  servoPorta.write(90); // ajusta conforme o movimento desejado
+  delay(5000); // mantém aberta por 5 segundos
+  Serial.println("Fechando porta...");
+  servoPorta.write(0);
+  delay(1000);
+}
+
+// ---------------- Loop principal ----------------
+void loop() {
+  char key = keypad.getKey();
+  if (key) {
+    if (key >= '1' && key <= '9') {
+      destino = key - '0';
+      Serial.print("Destino selecionado: ");
+      Serial.println(mapa[destino]);
+      intersecao = 0;
+      primeiraLeitura = true;
+      intersecaoDetectada = false;
+      andarFrente();
+    } else if (key == '0') {
+      destino = 10;
+      Serial.print("Destino selecionado: ");
+      Serial.println(mapa[10]);
+      intersecao = 0;
+      primeiraLeitura = true;
+      intersecaoDetectada = false;
+      andarFrente();
+    }
+  }
+
+  if (destino > 0) {
+    int esq = digitalRead(SENSOR_ESQ);
+    int dir = digitalRead(SENSOR_DIR);
+
+    if (esq == LOW && dir == HIGH) {
+      servoEsq.write(90);
+      servoDir.write(180);
+      intersecaoDetectada = false;
+    } else if (esq == HIGH && dir == LOW) {
+      servoEsq.write(180);
+      servoDir.write(90);
+      intersecaoDetectada = false;
+    } else if (esq == LOW && dir == LOW) {
+      if (!intersecaoDetectada) {
+        if (!primeiraLeitura) {
+          intersecao++;
+          Serial.print("Interseção detectada: ");
+          Serial.println(intersecao);
+
+          if (intersecao == destino) {
+            pararMotores();
+            Serial.print("Chegou em ");
+            Serial.println(mapa[destino]);
+
+            bool autorizado = false;
+            while (!autorizado) {
+              if (mfrc522.PICC_IsNewCardPresent() && mfrc522.PICC_ReadCardSerial()) {
+                Serial.print("UID lido: ");
+                for (byte i = 0; i < mfrc522.uid.size; i++) {
+                  Serial.print(mfrc522.uid.uidByte[i], HEX);
+                }
+                Serial.println();
+
+                autorizado = true;
+                mfrc522.PICC_HaltA();
+              }
+            }
+
+            abrirPorta(); // novo comando para abrir e fechar a porta
+
+            intersecao = 0;
+            destino = -1;
+            intersecaoDetectada = false;
+            primeiraLeitura = true;
+            delay(500);
+            meiaVolta();
+            andarFrente();
+          }
+        } else {
+          primeiraLeitura = false;
+        }
+        intersecaoDetectada = true;
+      }
+    } else {
+      andarFrente();
+      intersecaoDetectada = false;
+    }
+  }
+}
