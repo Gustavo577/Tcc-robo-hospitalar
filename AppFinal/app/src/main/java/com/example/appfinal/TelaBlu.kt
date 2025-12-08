@@ -14,8 +14,29 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.io.IOException
 import java.util.*
+import android.media.MediaPlayer
+import android.os.Vibrator
+import android.os.VibrationEffect
+import android.content.Context
 
 class TelaBlu : AppCompatActivity() {
+
+    private fun vibrateDevice() {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+
+        // Duração da vibração em milissegundos
+        val duration: Long = 100 // Vibração leve de 100ms
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Para Android 8.0 (Oreo) e superior:
+            val effect = VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE)
+            vibrator.vibrate(effect)
+        } else {
+            // Para versões anteriores:
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(duration)
+        }
+    }
 
     private lateinit var listView: ListView
     private lateinit var connectButton: Button
@@ -119,6 +140,11 @@ class TelaBlu : AppCompatActivity() {
                         Toast.makeText(this, "Conectado com ${device.name}", Toast.LENGTH_SHORT).show()
                         statusText.text = "Conectado com ${device.name}"
 
+                        // === CHAMADAS DE FEEDBACK TÁTIL E SONORO ===
+                        playConnectedSound()
+                        vibrateDevice() // CHAMADA AJUSTADA AQUI
+                        // ===========================================
+
                         // Atribui o socket Bluetooth para a classe TelaLog
                         TelaLog.bluetoothSocket = bluetoothSocket
 
@@ -157,6 +183,23 @@ class TelaBlu : AppCompatActivity() {
         }
     }
 
+    // --- Função para Tocar o Som ---
+    private fun playConnectedSound() {
+        // *CERTIFIQUE-SE DE QUE O ARQUIVO 'conexao_sucesso.mp3' ESTÁ EM res/raw*
+        try {
+            val mediaPlayer = MediaPlayer.create(this, R.raw.conexao_sucesso)
+
+            mediaPlayer.setOnCompletionListener {
+                it.release() // Libera o recurso ao terminar
+            }
+            mediaPlayer.start() // Toca o som
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Erro ao tocar o som de conexão.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ... (resto das funções, sem alterações)
     override fun onResume() {
         super.onResume()
         if (temPermissoesBluetooth()) {

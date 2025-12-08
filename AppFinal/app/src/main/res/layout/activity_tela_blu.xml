@@ -26,8 +26,8 @@
 
     <TextView
         android:id="@+id/textView3"
-        android:layout_width="243dp"
-        android:layout_height="176dp"
+        android:layout_width="242dp"
+        android:layout_height="55dp"
         android:fontFamily="sans-serif-condensed"
         android:text="BLUETOOTH"
         android:textAlignment="center"
@@ -42,20 +42,27 @@
 
     <ListView
         android:id="@+id/listViewDevices"
-        android:layout_width="283dp"
-        android:layout_height="524dp"
+        android:layout_width="276dp"
+        android:layout_height="450dp"
         android:background="#A09B9B"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.495"
+        app:layout_constraintHorizontal_bias="0.496"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.38" />
 
     <TextView
         android:id="@+id/textViewStatus"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Status: Desconectado"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/listViewDevices"
+        android:layout_marginTop="24dp"
         />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

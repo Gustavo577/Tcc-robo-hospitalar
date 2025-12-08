@@ -9,6 +9,10 @@ import androidx.appcompat.app.AppCompatActivity
 import java.io.IOException
 import java.io.InputStream
 import java.util.ArrayList
+// Importações adicionadas para formatar data e hora
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class TelaLog : AppCompatActivity() {
 
@@ -42,6 +46,10 @@ class TelaLog : AppCompatActivity() {
     }
 
     private fun startReadThread() {
+        // Objeto para formatar a hora (ex: 14:30:59)
+        // O formato "HH:mm:ss" mostra Hora, Minuto e Segundo.
+        val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+
         // Usa um buffer para ler os dados do socket
         val buffer = ByteArray(1024)
         var bytes: Int
@@ -62,10 +70,18 @@ class TelaLog : AppCompatActivity() {
                     val receivedData = String(buffer, 0, bytes).trim()
 
                     if (receivedData.isNotEmpty()) {
+                        // 1. Obtém a hora atual do sistema formatada
+                        val currentTime = timeFormatter.format(Date())
+
                         runOnUiThread {
-                            // Adiciona a leitura à lista e notifica o adapter
-                            rfidLogList.add("Cartão lido: $receivedData")
+                            // 2. Cria a nova entrada de log combinando hora e leitura
+                            // Exemplo: "14:30:59 - Cartão lido: 1A2B3C4D"
+                            val logEntry = "$currentTime - Cartão lido: $receivedData"
+
+                            // 3. Adiciona a leitura à lista e notifica o adapter
+                            rfidLogList.add(logEntry)
                             logAdapter.notifyDataSetChanged()
+
                             // Rola para a última leitura
                             rfidLogListView.smoothScrollToPosition(rfidLogList.size - 1)
                         }
